@@ -106,7 +106,7 @@ local append_to_view_defs = function(defs)
   
 	defs.widget_definitions.search_label = UIWidget.create_definition({
 		{
-			value = mod:localize("Search: "),
+			value = mod:localize("search"),
 			value_id = "text",
 			pass_type = "text",
 			style = table.clone(UIFontSettings.body),
