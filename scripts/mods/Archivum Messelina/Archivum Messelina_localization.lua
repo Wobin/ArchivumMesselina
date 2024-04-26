@@ -1,6 +1,7 @@
 local mod = get_mod("Archivum Messelina")
 
 mod:add_global_localize_strings({
+    
     loc_AM_filter_unearnt = {
         en = "Filtering by incomplete penances",
         ["zh-cn"] = "按未完成苦修筛选",
@@ -21,6 +22,9 @@ mod:add_global_localize_strings({
   
 
 return {
+  mod_name = {
+    en = "Archivum Messelina"
+    },
 	mod_description = {
 		en = "Archivum Messelina will allow you to filter/search your penances",
 		["zh-cn"] = "梅塞利纳档案馆 - 允许你筛选/搜索苦修",
