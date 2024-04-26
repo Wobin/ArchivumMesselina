@@ -28,6 +28,7 @@ mod:add_global_localize_strings({
 return {
 	mod_name = {
 		en = "Archivum Messelina",
+		["zh-cn"] = "苦修筛选 - 梅塞利纳档案馆",
 		ru = "Архивум Месселина",
 	},
 	mod_description = {
@@ -37,7 +38,7 @@ return {
 	},
   search = {
     en = "Search: ",
-    ["zh-cn"] = "搜索: ",
+    ["zh-cn"] = "搜索：",
     ru = "Поиск: "
     }
 }
