@@ -3,7 +3,7 @@ Title: Archivum Messelina
 Author: Wobin
 Date: 30/04/2024
 Repository: https://github.com/Wobin/ArchivumMesselina
-Version: 2.0
+Version: 2.0.1
 --]]
 
 local mod = get_mod("Archivum Messelina")
@@ -243,8 +243,7 @@ mod.on_all_mods_loaded = function()
   mod:hook_safe("PenanceOverviewView", "_cache_achievements", function(self, player)
       mod.achievements_by_category = table.clone(self._achievements_by_category)
       mod.achievements_by_category_unsorted = table.clone(self._achievements_by_category_unsorted)
-      mod.player = player
-      mod:notify("cached")
+      mod.player = player      
   end)
 
   mod:hook("PenanceOverviewView", "on_category_button_pressed", function(func, self, index, option, force_selection)
