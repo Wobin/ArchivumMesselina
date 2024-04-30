@@ -1,9 +1,9 @@
 --[[
 Title: Archivum Messelina
 Author: Wobin
-Date: 26/04/2024
+Date: 30/04/2024
 Repository: https://github.com/Wobin/ArchivumMesselina
-Version: 1.0
+Version: 2.0
 --]]
 
 local mod = get_mod("Archivum Messelina")
@@ -220,6 +220,8 @@ local stop_writing_passthru = function(func, ...)
 	if func then func(...) end
 end
 
+mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\FavouriteAchievements]])
+
 mod.on_all_mods_loaded = function()    
 
   mod:hook_require("scripts/ui/views/penance_overview_view/penance_overview_view_definitions", function(definitions)
@@ -242,6 +244,7 @@ mod.on_all_mods_loaded = function()
       mod.achievements_by_category = table.clone(self._achievements_by_category)
       mod.achievements_by_category_unsorted = table.clone(self._achievements_by_category_unsorted)
       mod.player = player
+      mod:notify("cached")
   end)
 
   mod:hook("PenanceOverviewView", "on_category_button_pressed", function(func, self, index, option, force_selection)
@@ -268,9 +271,7 @@ mod.on_all_mods_loaded = function()
   end)
   
   mod:hook_safe("PenanceOverviewView", "update", search_results)
-  --mod:hook("PenanceOverviewView", "_cb_on_penance_pressed", stop_writing_passthru)
-  --mod:hook("PenanceOverviewView", "_cb_on_penance_secondary_pressed", stop_writing_passthru)
-  --mod:hook("PenanceOverviewView", "_on_favorite_pressed", stop_writing_passthru)
+  
   mod:hook("PenanceOverviewView", "_is_result_presentation_active", function(func, self)
       return self._result_overlay or is_writing() 
   end)
@@ -299,4 +300,7 @@ mod.on_all_mods_loaded = function()
     end    
     if func then func(...) end
   end)
+
+  mod.create_favourites()
 end
+
