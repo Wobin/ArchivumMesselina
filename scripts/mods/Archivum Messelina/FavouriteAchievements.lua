@@ -31,7 +31,7 @@ mod.create_favourites = function()
 
   mod:hook("HudElementTacticalOverlay", "_create_right_panel_widgets", function (func, self, page_key, configs, ui_renderer)
     if page_key ~= "achievements" or #configs < 6 then return func(self, page_key, configs, ui_renderer) end
-    -- Get me a three cloned table to map a window to    
+    -- Get me a two cloned table to map a window to    
     local padded = table.append(table.clone(configs), table.clone(configs))
     mod.achivementCount = #configs    
     local current = table.slice( padded, window, 5)    
@@ -54,7 +54,7 @@ mod.create_favourites = function()
     if not mod.overlay then mod.overlay = self end
     if not input_service:is_null_service() and input_service:get("tactical_overlay_hold") then
       local view_service = Managers.input:get_input_service("View")
-      if input_service:get("wield_scroll_down") or view_service:get("navigate_up_pressed") then
+      if input_service:get("wield_scroll_down") or view_service:get("navigate_up_pressed") then        
         if window == mod.achivementCount then 
           window = 1
         else
@@ -70,9 +70,11 @@ mod.create_favourites = function()
       mod.overlay._current_achievements = nil
     end
   end)
-  mod:hook("ViewElementTabMenu", "add_entry", function(func, self, display_name, pressed_callback, category_button, option_icon, update_function)
-      if not self:parent().view_name == "penance_overview_view" then return func(self, display_name, pressed_callback, category_button, option_icon, update_function) end      
-       category_button[10] = {
+  mod:hook("ViewElementTabMenu", "add_entry", function(func, self, display_name, on_pressed_callback, pass_template, optional_display_icon, optional_update_function, no_localization)
+      if self:parent().view_name ~= "penance_overview_view" then 
+        return func( self, display_name, on_pressed_callback, pass_template, optional_display_icon, optional_update_function, no_localization) 
+      end            
+       pass_template[10] = {
                               value = "content/ui/materials/icons/generic/bookmark",
                               pass_type = "texture",
                               style = {
@@ -98,7 +100,7 @@ mod.create_favourites = function()
                               end
                             }      
 
-      return func(self, display_name, pressed_callback, category_button, option_icon, update_function)
+      return func( self, display_name, on_pressed_callback, pass_template, optional_display_icon, optional_update_function, no_localization)
   end)
 
 end

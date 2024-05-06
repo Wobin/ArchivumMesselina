@@ -1,9 +1,9 @@
 --[[
 Title: Archivum Messelina
 Author: Wobin
-Date: 30/04/2024
+Date: 07/05/2024
 Repository: https://github.com/Wobin/ArchivumMesselina
-Version: 2.0.1
+Version: 2.0.2
 --]]
 
 local mod = get_mod("Archivum Messelina")
