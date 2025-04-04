@@ -1,19 +1,20 @@
 --[[
 Title: Archivum Messelina
 Author: Wobin
-Date: 07/05/2024
+Date: 04/04/2025
 Repository: https://github.com/Wobin/ArchivumMesselina
-Version: 2.0.2
+Version: 2.1.1
 --]]
 
 local mod = get_mod("Archivum Messelina")
-
+mod.version = "2.1.1"
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local TextInputPassTemplates = require("scripts/ui/pass_templates/text_input_pass_templates")
 local LocalizationManager = require("scripts/managers/localization/localization_manager")
 local MemoiseAchievements = mod:persistent_table("MemoiseAchievements", {})
 local settings = {filter = 0}
+--local mt = get_mod("modding_tools")
 
 local cycleFilter = function()
   settings.filter = (settings.filter + 1) % 4
@@ -132,7 +133,11 @@ end
 local set_is_writing = function(value)
 	if not mod.input_field or not mod.input_field.content then return end  
 	mod.input_field.content.is_writing = value
+  --if mod.view and mod.view._categories_tab_bar then mod.view._categories_tab_bar._is_handling_navigation_input = not value end
+  --mt:echo(mod.view._categories_tab_bar._is_handling_navigation_input)
 end
+
+
 
 local refreshGrid = function()
   local view = mod.view
@@ -140,27 +145,47 @@ local refreshGrid = function()
     view:on_category_button_pressed(view._selected_option_button_index, view._category_button_config[view._selected_option_button_index], true)
   end
 end
+local onceOff = true
 
 local search_results = function(view)
 	if not view then return end
-	mod.view = view
-	mod.input_field = view._widgets_by_name["search_input"]
+  if not mod.view then mod.view = view end
+  if not view._categories_tab_bar then return end
+	if not mod.input_field then mod.input_field = view._widgets_by_name["search_input"] end
+  
+  if onceOff then
+    onceOff = false    
+    --mt:inspect("input",  view)    
+  end
   
   if not visibility() then return end
+  if not view or not mod.input_field then return end
   
-	if not view or not mod.input_field then return end
-  
+  local mouse_down = Mouse.any_pressed()
+  if mouse_down and is_writing() and mouse_down ~= 10 and mouse_down ~= 11 then    
+    set_is_writing(false)
+    view._categories_tab_bar:disable_input(false)
+    refreshGrid()
+    return
+  end
+
+  if is_writing() then
+    view._categories_tab_bar:disable_input(true)
+  else
+    view._categories_tab_bar:disable_input(false)
+  end
+
 	-- Used to focus the input field for next update.
 	if mod.set_is_writing_asap then
 		set_is_writing(true)
-		mod.set_is_writing_asap = false
+		mod.set_is_writing_asap = false    
 	end
 
 	-- Make sure we can escape input focus with the Escape key.
 	for _, ks in ipairs(Keyboard.keystrokes()) do
-		if is_writing() and ks == Keyboard.ESCAPE then
+		if is_writing() and (ks == Keyboard.ESCAPE or ks == Keyboard.ENTER) then
 			set_is_writing(false)
-			mod.block_next_legend_escape_check = true
+			mod.block_next_legend_escape_check = true      
 			return
 		elseif ks == "s" then
 			-- Lets us process the 's' keystroke without inputting it into field.
@@ -223,7 +248,7 @@ end
 mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\FavouriteAchievements]])
 
 mod.on_all_mods_loaded = function()    
-
+  mod:info(mod.version)
   mod:hook_require("scripts/ui/views/penance_overview_view/penance_overview_view_definitions", function(definitions)
       table.array_remove_if(definitions.legend_inputs, function(v) return v.display_name:match("loc_AM_") end)
       table.insert(definitions.legend_inputs, no_filter_definition)
@@ -239,7 +264,7 @@ mod.on_all_mods_loaded = function()
         refreshGrid()
       end
   end)
- 
+  
   mod:hook_safe("PenanceOverviewView", "_cache_achievements", function(self, player)
       mod.achievements_by_category = table.clone(self._achievements_by_category)
       mod.achievements_by_category_unsorted = table.clone(self._achievements_by_category_unsorted)
@@ -247,7 +272,7 @@ mod.on_all_mods_loaded = function()
   end)
 
   mod:hook("PenanceOverviewView", "on_category_button_pressed", function(func, self, index, option, force_selection)
-      if not mod.player then return func(self, index, option, force_selection) end
+      if not mod.player or not mod.input_field then return func(self, index, option, force_selection) end
       local category_id = option.category_id                                      
       if mod.current_category ~= category_id then 
         mod.current_category = category_id
@@ -290,7 +315,6 @@ mod.on_all_mods_loaded = function()
 
       end      
   end)
-  
   -- Prevents Legend hotkeys from triggering while search field is focused.
   mod:hook("ViewElementInputLegend", "_handle_input", function(func, ...)
     if (is_writing() or mod.block_next_legend_escape_check) then
@@ -300,6 +324,6 @@ mod.on_all_mods_loaded = function()
     if func then func(...) end
   end)
 
-  mod.create_favourites()
+  mod.create_favourites()  
 end
 
