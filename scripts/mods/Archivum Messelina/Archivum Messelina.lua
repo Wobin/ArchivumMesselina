@@ -1,13 +1,13 @@
 --[[
 Title: Archivum Messelina
 Author: Wobin
-Date: 04/04/2025
+Date: 26/09/2025
 Repository: https://github.com/Wobin/ArchivumMesselina
-Version: 2.1.1
+Version: 2.3
 --]]
-
+local mt = get_mod("modding_tools")
 local mod = get_mod("Archivum Messelina")
-mod.version = "2.1.1"
+mod.version = "2.3"
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local TextInputPassTemplates = require("scripts/ui/pass_templates/text_input_pass_templates")
@@ -137,13 +137,8 @@ local set_is_writing = function(value)
   --mt:echo(mod.view._categories_tab_bar._is_handling_navigation_input)
 end
 
-
-
 local refreshGrid = function()
-  local view = mod.view
-  if view then
-    view:on_category_button_pressed(view._selected_option_button_index, view._category_button_config[view._selected_option_button_index], true)
-  end
+  mod.view._select_category(mod.view, mod.last_index or 1)
 end
 local onceOff = true
 
@@ -259,21 +254,24 @@ mod.on_all_mods_loaded = function()
   end)
 
   mod:hook_safe("PenanceOverviewView", "init", function(self, settings, context)
-      CLASSES.PenanceOverviewView.cb_on_filter = function(self)    
+      CLASSES.PenanceOverviewView.cb_on_filter = function(self)            
         cycleFilter()    
         refreshGrid()
       end
   end)
   
-  mod:hook_safe("PenanceOverviewView", "_cache_achievements", function(self, player)
-      mod.achievements_by_category = table.clone(self._achievements_by_category)
-      mod.achievements_by_category_unsorted = table.clone(self._achievements_by_category_unsorted)
-      mod.player = player      
+  mod:hook_safe("PenanceOverviewView", "_build_achievements_cache", function(self)
+      mod.achievements_by_category = table.clone(self._achievements_by_category)      
+      mod.player = self:_player()
   end)
 
-  mod:hook("PenanceOverviewView", "on_category_button_pressed", function(func, self, index, option, force_selection)
-      if not mod.player or not mod.input_field then return func(self, index, option, force_selection) end
-      local category_id = option.category_id                                      
+  mod:hook_safe("PenanceOverviewView", "on_category_button_pressed", function (self, index) 
+    mod.last_index = index
+    mod.view = self
+  end)
+
+  mod:hook("PenanceOverviewView", "_add_category_to_penance_grid_layout", function(func, self, layout, show_header, category_id, comparator)    
+    if not mod.player or not mod.input_field then return func(self, layout, show_header, category_id, comparator) end      
       if mod.current_category ~= category_id then 
         mod.current_category = category_id
         mod.block_next_legend_escape_check = true
@@ -282,16 +280,9 @@ mod.on_all_mods_loaded = function()
         mod.input_field.content.last_text = " "
       end
       
-      self._achievements_by_category[category_id] = filterAchievements(category_id,mod.achievements_by_category, self)
-      self._achievements_by_category_unsorted[category_id] = filterAchievements(category_id, mod.achievements_by_category_unsorted, self)
-      
-      if #option.child_categories > 0 then
-        for _,subCategory in pairs(option.child_categories) do        
-          self._achievements_by_category[subCategory] = filterAchievements(subCategory, mod.achievements_by_category, self)
-          self._achievements_by_category_unsorted[subCategory] = filterAchievements(subCategory, mod.achievements_by_category_unsorted, self)
-        end
-      end      
-      return func(self, index, option, force_selection)
+      self._achievements_by_category[category_id] = filterAchievements(category_id,mod.achievements_by_category, self)      
+           
+      return func(self, layout, show_header, category_id, comparator)
   end)
   
   mod:hook_safe("PenanceOverviewView", "update", search_results)
@@ -317,10 +308,12 @@ mod.on_all_mods_loaded = function()
   end)
   -- Prevents Legend hotkeys from triggering while search field is focused.
   mod:hook("ViewElementInputLegend", "_handle_input", function(func, ...)
-    if (is_writing() or mod.block_next_legend_escape_check) then
-      mod.block_next_legend_escape_check = false
-      return
-    end    
+    if Managers.ui:view_active("penance_overview_view") then 
+      if (is_writing() or mod.block_next_legend_escape_check) then
+        mod.block_next_legend_escape_check = false
+        return
+      end    
+    end
     if func then func(...) end
   end)
 

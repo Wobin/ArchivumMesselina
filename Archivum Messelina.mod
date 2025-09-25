@@ -8,5 +8,6 @@ return {
 			mod_localization = "Archivum Messelina/scripts/mods/Archivum Messelina/Archivum Messelina_localization",
 		})
 	end,
+	version = "2.3",
 	packages = {},
 }
