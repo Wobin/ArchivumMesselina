@@ -1,13 +1,13 @@
 --[[
 Title: Archivum Messelina
 Author: Wobin
-Date: 26/09/2025
+Date: 01/10/2025
 Repository: https://github.com/Wobin/ArchivumMesselina
-Version: 2.3
+Version: 2.4
 --]]
 local mt = get_mod("modding_tools")
 local mod = get_mod("Archivum Messelina")
-mod.version = "2.3"
+mod.version = "2.4"
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local TextInputPassTemplates = require("scripts/ui/pass_templates/text_input_pass_templates")

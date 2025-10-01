@@ -23,11 +23,12 @@ local setup_bookmarks = function(self, options)
 end
 
 mod.create_favourites = function()    
-  window = 1
+  local window = 1
  mod:hook_require("scripts/settings/ui/ui_settings", function(settings)
       settings.max_favorite_achievements = mod:get("max_favourites") or 5
   end)
   mod:hook_safe("PenanceOverviewView","_setup_penance_category_buttons", function(self, options)
+     mod.categories_tab_bar = self._categories_tab_bar
      setup_bookmarks(self, options)
   end)
 
@@ -35,33 +36,6 @@ mod.create_favourites = function()
  		setup_bookmarks(self, self._category_button_config)
   end)
 
-  mod:hook_safe("HudElementTacticalOverlay", "update", function (self, dt, t, ui_renderer, render_settings, input_service)
-    local is_input_blocked = Managers.ui:using_input(true)
-    
-    input_service = is_input_blocked and input_service:null_service() or Managers.input:get_input_service("Ingame")
-
-    if not mod.overlay then mod.overlay = self end
-    if not mod.achievementCount or mod.achivementCount < 6 then return end
-    if not input_service:is_null_service() and input_service:get("tactical_overlay_hold") then
-      local view_service = Managers.input:get_input_service("View")
-      if input_service:get("wield_scroll_down") or view_service:get("navigate_up_pressed") then        
-        if window == mod.achivementCount then 
-          window = 1
-        else
-          window = window + 1
-        end        
-      end
-      if input_service:get("wield_scroll_up") or view_service:get("navigate_down_pressed") then
-        if window == 1 then 
-          window = mod.achivementCount
-      else        
-          window = window - 1
-        end
-      end
-      self._current_achievements = {}      
-    end
-  end)
---]]
   mod:hook("ViewElementTabMenu", "add_entry", function(func, self, display_name, on_pressed_callback, pass_template, optional_display_icon, optional_update_function, no_localization)
       if self:parent().view_name ~= "penance_overview_view" then 
         return func( self, display_name, on_pressed_callback, pass_template, optional_display_icon, optional_update_function, no_localization) 
