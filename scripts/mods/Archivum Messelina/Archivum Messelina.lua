@@ -1,20 +1,18 @@
 --[[
 Title: Archivum Messelina
 Author: Wobin
-Date: 02/10/2025
+Date: 17/03/2026
 Repository: https://github.com/Wobin/ArchivumMesselina
-Version: 2.4.1
+Version: 2.5
 --]]
 local mt = get_mod("modding_tools")
 local mod = get_mod("Archivum Messelina")
-mod.version = "2.4.1"
+mod.version = "2.5"
 local UIFontSettings = require("scripts/managers/ui/ui_font_settings")
 local UIWidget = require("scripts/managers/ui/ui_widget")
 local TextInputPassTemplates = require("scripts/ui/pass_templates/text_input_pass_templates")
-local LocalizationManager = require("scripts/managers/localization/localization_manager")
 local MemoiseAchievements = mod:persistent_table("MemoiseAchievements", {})
 local settings = {filter = 0}
---local mt = get_mod("modding_tools")
 
 local cycleFilter = function()
   settings.filter = (settings.filter + 1) % 4
@@ -86,7 +84,6 @@ local append_to_view_defs = function(defs)
 	local x_offset = 10
 	local y_offset = 53
   local z_offset = 25
-  local dumped = false
 
 	defs.scenegraph_definition.search_label = {
 		vertical_alignment = "top",
@@ -138,51 +135,88 @@ local set_is_writing = function(value)
 end
 
 local refreshGrid = function()
-  mod.view._select_category(mod.view, mod.last_index or 1)
+  if mod.view and mod.view._penance_grid then
+    mod.view._select_category(mod.view, mod.last_index or 1)
+  end
 end
-local onceOff = true
 
-local search_results = function(view)
+local set_navigation_lock = function(view, locked)
+  if not view then return end
+
+  if view._categories_tab_bar then
+    view._categories_tab_bar:disable_input(locked)
+    if view._categories_tab_bar.set_is_handling_navigation_input then
+      view._categories_tab_bar:set_is_handling_navigation_input(not locked)
+    end
+  end
+
+  if view._penance_grid then
+    view._penance_grid:disable_input(locked)
+  end
+
+  if view._top_panel then
+    view._top_panel:disable_input(locked)
+    if view._top_panel.set_is_handling_navigation_input then
+      view._top_panel:set_is_handling_navigation_input(not locked)
+    end
+  end
+end
+
+local stop_writing_safe = function()
+  if not is_writing() then return end
+  set_is_writing(false)
+  set_navigation_lock(mod.view, false)
+end
+
+local is_close_search_keystroke = function(ks)
+  if type(ks) == "number" then
+    return (Keyboard and ks == Keyboard.ESCAPE) or (Keyboard and ks == Keyboard.ENTER)
+  end
+
+  if type(ks) ~= "string" then return false end
+
+  local key = string.lower(ks)
+  return key == "escape" or key == "esc" or key == "enter" or key == "return" or key == "\n" or key == "\r"
+end
+
+local is_focus_search_shortcut = function(ks)
+  if type(ks) ~= "string" then return false end
+  return string.lower(ks) == "s"
+end
+
+local search_results = function(view, dt, t, input_service)
 	if not view then return end
   if not mod.view then mod.view = view end
   if not view._categories_tab_bar then return end
 	if not mod.input_field then mod.input_field = view._widgets_by_name["search_input"] end
-  
-  if onceOff then
-    onceOff = false    
-    --mt:inspect("input",  view)    
-  end
-  
-  if not visibility() then return end
-  if not view or not mod.input_field then return end
-  
-  local mouse_down = Mouse.any_pressed()
-  if mouse_down and is_writing() and mouse_down ~= 10 and mouse_down ~= 11 then    
-    set_is_writing(false)
-    view._categories_tab_bar:disable_input(false)
-    refreshGrid()
-    return
-  end
 
-  if is_writing() then
-    view._categories_tab_bar:disable_input(true)
-  else
-    view._categories_tab_bar:disable_input(false)
+  if not visibility() then return end
+  if not mod.input_field then return end
+
+  -- Defocus when user clicks anywhere outside the input field.
+  if is_writing() and input_service and input_service:get("left_pressed") then
+    local hotspot = mod.input_field.content and mod.input_field.content.hotspot
+    if not (hotspot and hotspot.on_pressed) then
+      stop_writing_safe()
+      return
+    end
   end
 
 	-- Used to focus the input field for next update.
 	if mod.set_is_writing_asap then
 		set_is_writing(true)
-		mod.set_is_writing_asap = false    
+		mod.set_is_writing_asap = false
 	end
 
 	-- Make sure we can escape input focus with the Escape key.
-	for _, ks in ipairs(Keyboard.keystrokes()) do
-		if is_writing() and (ks == Keyboard.ESCAPE or ks == Keyboard.ENTER) then
+	local keystrokes = Keyboard.keystrokes()
+
+	for _, ks in ipairs(keystrokes) do
+    if is_writing() and is_close_search_keystroke(ks) then
 			set_is_writing(false)
 			mod.block_next_legend_escape_check = true      
 			return
-		elseif ks == "s" then
+    elseif not is_writing() and is_focus_search_shortcut(ks) then
 			-- Lets us process the 's' keystroke without inputting it into field.
 			mod.set_is_writing_asap = true
 			return
@@ -219,25 +253,20 @@ local search_results = function(view)
 end
 
 local filterAchievements = function(category, achievementList, view)
-  local filtered_category = {}                    
-  for i,v in pairs(achievementList[category] and achievementList[category] or {}) do             
-    local earnt = Managers.achievements:achievement_completed(view:_player(), v)                        
-    if (earnt and isFilterByEarnt()) or 
-    (not earnt and isFilterByUnearnt()) or               
-    (earnt and isUnclaimed() and view:_can_claim_achievement_by_id(v)) or     
-    isNotFiltered()  then                
-      if not mod.searchFiltered or (mod.searchFiltered and table.contains(mod.searchFiltered, v)) then
-          filtered_category[#filtered_category + 1] = v                 
-        end
+  local filtered_category = {}
+  local player = view:_player()
+  for _, v in pairs(achievementList[category] or {}) do
+    local earnt = Managers.achievements:achievement_completed(player, v)
+    if (earnt and isFilterByEarnt()) or
+    (not earnt and isFilterByUnearnt()) or
+    (earnt and isUnclaimed() and view:_can_claim_achievement_by_id(v)) or
+    isNotFiltered() then
+      if not mod.searchFiltered or table.contains(mod.searchFiltered, v) then
+        filtered_category[#filtered_category + 1] = v
+      end
     end
-  end   
+  end
   return filtered_category
-end
-
--- Takes focus from search field if player clicks on grid entries.
-local stop_writing_passthru = function(func, ...)
-	set_is_writing(false)
-	if func then func(...) end
 end
 
 mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\FavouriteAchievements]])
@@ -265,47 +294,64 @@ mod.on_all_mods_loaded = function()
       mod.player = self:_player()
   end)
 
-  mod:hook_safe("PenanceOverviewView", "on_category_button_pressed", function (self, index) 
+  mod:hook_safe("PenanceOverviewView", "on_category_button_pressed", function (self, index)
+    -- User explicitly switched tabs: defocus the search field and clear text.
+    stop_writing_safe()
+    if mod.input_field and mod.input_field.content then
+      mod.input_field.content.input_text = ""
+      mod.input_field.last_text = nil
+      mod.searchFiltered = nil
+    end
     mod.last_index = index
     mod.view = self
   end)
 
-  mod:hook("PenanceOverviewView", "_add_category_to_penance_grid_layout", function(func, self, layout, show_header, category_id, comparator)    
-    if not mod.player or not mod.input_field then return func(self, layout, show_header, category_id, comparator) end      
-      if mod.current_category ~= category_id then 
-        mod.current_category = category_id
-        mod.block_next_legend_escape_check = true
-        set_is_writing(false)
-        mod.input_field.content.input_text = ""
-        mod.input_field.content.last_text = " "
-      end
-      
-      self._achievements_by_category[category_id] = filterAchievements(category_id,mod.achievements_by_category, self)      
-           
-      return func(self, layout, show_header, category_id, comparator)
+  mod:hook("PenanceOverviewView", "_add_category_to_penance_grid_layout", function(func, self, layout, show_header, category_id, comparator)
+    if not mod.player or not mod.input_field then return func(self, layout, show_header, category_id, comparator) end
+    self._achievements_by_category[category_id] = filterAchievements(category_id, mod.achievements_by_category, self)
+    return func(self, layout, show_header, category_id, comparator)
   end)
   
   mod:hook_safe("PenanceOverviewView", "update", search_results)
-  
+
+  -- Re-apply navigation lock after _set_handle_navigation re-enables
+  -- elements every frame. This runs while _set_handle_navigation is still on
+  -- the call stack so the lock is set before super.update processes elements.
+  mod:hook_safe("PenanceOverviewView", "_set_handle_navigation", function(self)
+    if is_writing() then
+      set_navigation_lock(self, true)
+    end
+  end)
+
   mod:hook("PenanceOverviewView", "_is_result_presentation_active", function(func, self)
-      return self._result_overlay or is_writing() 
+      return self._result_overlay
   end)
 
   mod:hook_safe("ViewElementGrid", "set_alpha_multiplier", function(self, multiplier)
       if not mod.view or self ~= mod.view._penance_grid then return end
-      if multiplier < 0.8 then
-        mod.view._widgets_by_name["search_input"].visible = false
-        mod.view._widgets_by_name["search_label"].visible = false
-        mod.view._widgets_by_name["search_input"].content.hide_background = true
-        mod.view._widgets_by_name["search_input"].content.hide_baseline = true
-      else
-        mod.view._widgets_by_name["search_input"].visible = true
-        mod.view._widgets_by_name["search_label"].visible = true        
-        mod.view._widgets_by_name["search_input"].content.hide_background = false
-        mod.view._widgets_by_name["search_input"].content.hide_baseline = false
-
-      end      
+      local wbn = mod.view._widgets_by_name
+      local search_input = wbn["search_input"]
+      local visible = multiplier >= 0.8
+      search_input.visible = visible
+      wbn["search_label"].visible = visible
+      search_input.content.hide_background = not visible
+      search_input.content.hide_baseline = not visible
   end)
+
+  mod:hook("ViewElementGrid", "cb_on_grid_entry_left_pressed", function(func, self, ...)
+    if mod.view and self == mod.view._penance_grid then
+      stop_writing_safe()
+    end
+    if func then return func(self, ...) end
+  end)
+
+  mod:hook("ViewElementGrid", "cb_on_grid_entry_double_click_pressed", function(func, self, ...)
+    if mod.view and self == mod.view._penance_grid then
+      stop_writing_safe()
+    end
+    if func then return func(self, ...) end
+  end)
+
   -- Prevents Legend hotkeys from triggering while search field is focused.
   mod:hook("ViewElementInputLegend", "_handle_input", function(func, ...)
     if Managers.ui:view_active("penance_overview_view") then 
