@@ -11,7 +11,7 @@ local onListTab = function(parent)
 end
 
 mod.visibility = function()
-	return mod.view and mod.view._selected_top_option_key == "browser" or false
+	return mod.view ~= nil and mod.view._selected_top_option_key == "browser"
 end
 
 mod.filter_unclaimed_definition = {

@@ -4,6 +4,11 @@ local AchievementUIHelper = require("scripts/managers/achievements/utility/achie
 local MemoiseAchievements = mod:persistent_table("MemoiseAchievements", {})
 
 local Managers = Managers
+local ipairs, pairs = ipairs, pairs
+local string_format = string.format
+local string_gsub = string.gsub
+local string_lower = string.lower
+local string_match = string.match
 
 mod._filter_settings = mod._filter_settings or { filter = 0 }
 
@@ -11,6 +16,7 @@ local settings = mod._filter_settings
 
 mod.cycleFilter = function()
 	settings.filter = (settings.filter + 1) % 4
+	mod._counts_dirty = true
 end
 
 mod.isNotFiltered = function()
@@ -60,7 +66,7 @@ local get_search_index_text = function(achievement_id)
 
 	local title = AchievementUIHelper.localized_title(achievement_definition) or ""
 	local description = AchievementUIHelper.localized_description(achievement_definition, true) or ""
-	local searchable = string.lower(title .. " " .. description)
+	local searchable = string_lower(title .. " " .. description)
 
 	MemoiseAchievements[achievement_id] = searchable
 
@@ -70,12 +76,13 @@ end
 mod.rebuild_search_filtered = function(term)
 	mod.searchFiltered = nil
 	mod.searchFilteredSet = nil
+	mod._counts_dirty = true
 
 	if not term or term == "" or not mod.achievements_by_category then
 		return
 	end
 
-	local escaped_term = string.gsub(string.lower(term), "%%", "%%%%")
+	local escaped_term = string_gsub(string_lower(term), "%%", "%%%%")
 	local search_items = {}
 	local search_set = {}
 
@@ -84,7 +91,7 @@ mod.rebuild_search_filtered = function(term)
 			if not search_set[achievement_id] then
 				local searchable = get_search_index_text(achievement_id)
 
-				if searchable ~= "" and string.match(searchable, escaped_term) then
+				if searchable ~= "" and string_match(searchable, escaped_term) then
 					search_items[#search_items + 1] = achievement_id
 					search_set[achievement_id] = true
 				end
@@ -139,7 +146,7 @@ mod.update_category_tab_counts = function(view)
 						unclaimed_count = unclaimed_count + 1
 					end
 
-					if view:is_favorite_achievement(achievement_id) then
+					if view.is_favorite_achievement and view:is_favorite_achievement(achievement_id) then
 						favorite_count = favorite_count + 1
 					end
 				end
@@ -149,16 +156,21 @@ mod.update_category_tab_counts = function(view)
 		local entry_content = view._widget_content_by_category[option.category_id]
 
 		if entry_content then
-			entry_content.text_counter = string.format("%d/%d", completed_count, total_count)
+			entry_content.text_counter = string_format("%d/%d", completed_count, total_count)
 			entry_content.has_unclaimed_penances = unclaimed_count > 0
 			entry_content.has_favorite_penances = favorite_count > 0
 		end
 	end
+
+	mod._counts_dirty = false
 end
 
 mod.refreshGrid = function()
 	if mod.view and mod.view._penance_grid then
-		mod.view._select_category(mod.view, mod.last_index or 1)
-		mod.update_category_tab_counts(mod.view)
+		mod.view:_select_category(mod.last_index or 1)
+
+		if mod._counts_dirty then
+			mod.update_category_tab_counts(mod.view)
+		end
 	end
 end

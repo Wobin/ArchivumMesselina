@@ -32,6 +32,7 @@ mod.register_view_hooks = function()
 	mod:hook_safe("PenanceOverviewView", "_build_achievements_cache", function(self)
 		mod.achievements_by_category = table.clone(self._achievements_by_category)
 		mod.player = self:_player()
+		mod._counts_dirty = true
 
 		if mod.input_field and mod.input_field.content then
 			mod.rebuild_search_filtered(mod.input_field.content.input_text)
