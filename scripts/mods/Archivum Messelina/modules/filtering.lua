@@ -166,11 +166,15 @@ mod.update_category_tab_counts = function(view)
 end
 
 mod.refreshGrid = function()
-	if mod.view and mod.view._penance_grid then
-		mod.view:_select_category(mod.last_index or 1)
+	local view = mod.view
 
-		if mod._counts_dirty then
-			mod.update_category_tab_counts(mod.view)
-		end
+	if not view or not view._penance_grid or not view._ui_renderer then
+		return
+	end
+
+	view:_select_category(view._selected_option_button_index or mod.last_index or 1)
+
+	if mod._counts_dirty then
+		mod.update_category_tab_counts(view)
 	end
 end

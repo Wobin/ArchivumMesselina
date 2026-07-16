@@ -34,6 +34,8 @@ mod.register_view_hooks = function()
 		mod.player = self:_player()
 		mod._counts_dirty = true
 
+		mod.bind_view(self)
+
 		if mod.input_field and mod.input_field.content then
 			mod.rebuild_search_filtered(mod.input_field.content.input_text)
 		end
@@ -45,14 +47,26 @@ mod.register_view_hooks = function()
 		mod.view = self
 	end)
 
+	mod:hook_safe("PenanceOverviewView", "destroy", function(self)
+		if mod.view == self then
+			mod.reset_view_state()
+		end
+	end)
+
 	mod:hook("PenanceOverviewView", "_add_category_to_penance_grid_layout", function(func, self, layout, show_header, category_id, comparator)
 		if not mod.player or not mod.input_field then
 			return func(self, layout, show_header, category_id, comparator)
 		end
 
+		local unfiltered = self._achievements_by_category[category_id]
+
 		self._achievements_by_category[category_id] = mod.filterAchievements(category_id, mod.achievements_by_category, self)
 
-		return func(self, layout, show_header, category_id, comparator)
+		local result = func(self, layout, show_header, category_id, comparator)
+
+		self._achievements_by_category[category_id] = unfiltered
+
+		return result
 	end)
 
 	mod:hook_safe("PenanceOverviewView", "update", mod.search_results)

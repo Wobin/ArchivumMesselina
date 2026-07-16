@@ -4,12 +4,14 @@ mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\modules\hooks
 mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\modules\hooks\view]])
 mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\modules\hooks\grid]])
 mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\modules\hooks\legend]])
+mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\modules\hooks\tactical]])
 
 mod.register_hooks = function()
 	mod.register_definition_hooks()
 	mod.register_view_hooks()
 	mod.register_grid_hooks()
 	mod.register_legend_hooks()
+	mod.register_tactical_hooks()
 
 	mod.create_favourites()
 end

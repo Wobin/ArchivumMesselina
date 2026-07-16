@@ -1,5 +1,18 @@
 local mod = get_mod("Archivum Messelina")
 local AchievementUIHelper = require("scripts/managers/achievements/utility/achievement_ui_helper")
+local UISettings = require("scripts/settings/ui/ui_settings")
+
+local DEFAULT_MAX_FAVOURITES = 5
+
+mod.apply_max_favourites = function()
+	UISettings.max_favorite_achievements = mod:get("max_favourites") or DEFAULT_MAX_FAVOURITES
+end
+
+mod.on_setting_changed = function(setting_id)
+	if setting_id == "max_favourites" then
+		mod.apply_max_favourites()
+	end
+end
 
 local setup_bookmarks = function(self, options)
  if not mod.achievements_by_category then return end
@@ -25,11 +38,15 @@ end
 mod.create_favourites = function()    
   local window = 1
  mod:hook_require("scripts/settings/ui/ui_settings", function(settings)
-      settings.max_favorite_achievements = mod:get("max_favourites") or 5
+      settings.max_favorite_achievements = mod:get("max_favourites") or DEFAULT_MAX_FAVOURITES
   end)
+
+  mod.apply_max_favourites()
   mod:hook_safe("PenanceOverviewView","_setup_penance_category_buttons", function(self, options)
      mod.categories_tab_bar = self._categories_tab_bar
      setup_bookmarks(self, options)
+     mod._counts_dirty = true
+     mod.update_category_tab_counts(self)
   end)
 
   mod:hook_safe("PenanceOverviewView","_cb_on_penance_secondary_pressed", function (self, widget, config)      

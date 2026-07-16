@@ -7,7 +7,12 @@ mod.register_grid_hooks = function()
 		end
 
 		local widgets_by_name = mod.view._widgets_by_name
-		local search_input = widgets_by_name["search_input"]
+		local search_input = widgets_by_name and widgets_by_name["search_input"]
+
+		if not search_input or not widgets_by_name["search_label"] then
+			return
+		end
+
 		local visible = multiplier >= 0.8
 
 		search_input.visible = visible
