@@ -1,0 +1,61 @@
+name: Release Archivum Messelina
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to upload (e.g. 3.2)
+        required: true
+
+jobs:
+  package-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set version
+        run: echo "VERSION=${{ github.event.release.tag_name || inputs.version }}" >> "$GITHUB_ENV"
+
+      - name: Package (no git artefacts)
+        run: |
+          git archive --format=zip --prefix="Archivum Messelina/" \
+            -o "Archivum-Messelina-${VERSION}.zip" HEAD
+
+      - name: Verify zip contents
+        run: |
+          unzip -l "Archivum-Messelina-${VERSION}.zip"
+          if unzip -l "Archivum-Messelina-${VERSION}.zip" | grep -E '\.git|\.github|docs/|tests/'; then
+            echo "Non-shipping artefacts found in zip" && exit 1
+          fi
+          unzip -l "Archivum-Messelina-${VERSION}.zip" | grep -q 'Archivum Messelina/Archivum Messelina.mod' \
+            || { echo "Missing Archivum Messelina.mod" && exit 1; }
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Archivum-Messelina-${{ env.VERSION }}
+          path: Archivum-Messelina-${{ env.VERSION }}.zip
+
+      - name: Resolve Nexus file_id (v2 GraphQL groupId)
+        if: ${{ !github.event.release.prerelease }}
+        run: |
+          FID=$(curl -sS -H "apikey: ${{ secrets.NEXUSMODS_APIKEY }}" -H "content-type: application/json" \
+            -X POST "https://api.nexusmods.com/v2/graphql" \
+            -d '{"query":"query{modFiles(modId:\"${{ vars.NEXUS_MOD_ID }}\",gameId:\"4943\"){primary category groupId}}"}' \
+            | jq -r '([.data.modFiles[]|select(.primary==1)]+[.data.modFiles[]|select(.category=="MAIN")])[0].groupId')
+          if [ -z "$FID" ] || [ "$FID" = "null" ]; then echo "no groupId" && exit 1; fi
+          echo "NEXUS_FILE_ID=$FID" >> "$GITHUB_ENV"
+
+      - name: Upload to Nexus Mods
+        if: ${{ !github.event.release.prerelease }}
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.8
+        with:
+          api_key: ${{ secrets.NEXUSMODS_APIKEY }}
+          file_id: ${{ env.NEXUS_FILE_ID }}
+          filename: Archivum-Messelina-${{ env.VERSION }}.zip
+          version: ${{ env.VERSION }}
+          display_name: Archivum Messelina ${{ env.VERSION }}
+          category: main
+          description: ${{ github.event.release.body }}

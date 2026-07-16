@@ -1,0 +1,9 @@
+.github/        export-ignore
+.gitattributes  export-ignore
+.gitignore      export-ignore
+.vscode/        export-ignore
+docs/           export-ignore
+tests/          export-ignore
+.superpowers/   export-ignore
+README.md       export-ignore
+LICENSE         export-ignore

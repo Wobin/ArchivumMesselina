@@ -1,2 +1,4 @@
 
 *.vortex_backup
+docs/
+.superpowers/
