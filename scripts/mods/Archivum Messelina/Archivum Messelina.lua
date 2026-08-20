@@ -2,11 +2,10 @@
 Title: Archivum Messelina
 Author: Wobin
 Repository: https://github.com/Wobin/ArchivumMesselina
-Version: 3.2
 --]]
 
 local mod = get_mod("Archivum Messelina")
-mod.version = "3.2"
+mod.version = mod.get_metadata and mod:get_metadata("version") or "unknown"
 
 mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\modules\ui]])
 mod:io_dofile([[Archivum Messelina\scripts\mods\Archivum Messelina\modules\input]])

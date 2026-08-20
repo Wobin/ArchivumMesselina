@@ -9,5 +9,4 @@ return {
 		})
 	end,
 	packages = {},
-	version = "3.2",
 }

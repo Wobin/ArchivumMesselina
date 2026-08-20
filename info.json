@@ -1,0 +1,17 @@
+{
+	"name": "Archivum Messelina",
+	"description": "Archivum Messelina will allow you to filter/search your penances",
+	"version": "3.3",
+	"author": "Wobin",
+	"homepage": "https://www.nexusmods.com/warhammer40kdarktide/mods/307",
+	"source": "https://github.com/Wobin/ArchivumMesselina",
+	"funding": {
+		"kofi": "https://ko-fi.com/wobin_dwonderdog"
+	},
+	"nexusId": "307",
+	"order": {
+		"require": [],
+		"this_after": [],
+		"this_before": []
+	}
+}

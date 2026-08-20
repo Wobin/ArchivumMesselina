@@ -14,6 +14,10 @@ mod.on_setting_changed = function(setting_id)
 	end
 end
 
+
+mod.on_settings_reset = function()
+	mod.apply_max_favourites()
+end
 local setup_bookmarks = function(self, options)
  if not mod.achievements_by_category then return end
     for i = 1, #options do
